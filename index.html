@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="kaa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Android & Kotlin Quiz — 100 soraw</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --accent: #3b82f6;
+    --correct: #22c55e;
+    --wrong: #ef4444;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .container {
+    width: 100%;
+    max-width: 720px;
+    background: var(--card);
+    border-radius: 20px;
+    padding: 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  h1 { font-size: 1.6rem; margin-bottom: 8px; }
+  .subtitle { color: var(--muted); margin-bottom: 24px; font-size: .95rem; }
+
+  /* Прогресс */
+  .progress-bar {
+    height: 8px;
+    background: #334155;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width .3s ease;
+  }
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: .85rem;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+
+  /* Вопрос */
+  .question {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  /* Ответы */
+  .options { display: flex; flex-direction: column; gap: 12px; }
+  .option {
+    padding: 14px 18px;
+    background: #334155;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 1rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all .2s;
+    font-family: inherit;
+  }
+  .option:hover:not(:disabled) {
+    background: #475569;
+    border-color: var(--accent);
+  }
+  .option:disabled { cursor: default; }
+  .option.correct { background: var(--correct); color: #052e16; font-weight: 600; }
+  .option.wrong   { background: var(--wrong);   color: #450a0a; font-weight: 600; }
+
+  /* Экран результатов */
+  .result { text-align: center; padding: 20px 0; }
+  .result .score-big {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--accent);
+    margin: 16px 0;
+  }
+  .result .message { font-size: 1.1rem; margin-bottom: 24px; color: var(--muted); }
+
+  .btn {
+    padding: 14px 32px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .btn:hover { background: #2563eb; }
+
+  .hidden { display: none; }
+
+  /* Таймер */
+  .timer {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+  .timer.danger { color: var(--wrong); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Стартовый экран -->
+  <div id="startScreen">
+    <h1>📱 Android & Kotlin Quiz</h1>
+    <p class="subtitle">100 soraw · hár sorawǵa 20 sekund · nátiyjení biliń</p>
+    <button class="btn" onclick="startQuiz()">Baslaw 🚀</button>
+  </div>
+
+  <!-- Экран викторины -->
+  <div id="quizScreen" class="hidden">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="meta">
+      <span>Soraw <b id="qNum">1</b> / <b id="qTotal">100</b></span>
+      <span class="timer" id="timer">⏱ 20s</span>
+      <span>Ball: <b id="scoreNow">0</b></span>
+    </div>
+    <div class="question" id="questionText"></div>
+    <div class="options" id="optionsBox"></div>
+  </div>
+
+  <!-- Экран результатов -->
+  <div id="resultScreen" class="hidden result">
+    <h1>Nátiyje 🎉</h1>
+    <div class="score-big" id="finalScore">0</div>
+    <div class="message" id="finalMessage"></div>
+    <button class="btn" onclick="location.reload()">Qaytadan 🔄</button>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   БАНК ВОПРОСОВ — все 100 из документа
+   correct: индекс правильного ответа (0-based)
+   ============================================================ */
+const QUESTIONS = [
+  { q: "Kotlin tilinde ózgermes (constant/val) maǵlıwmatlardı saqlaw ushın qaysı túsinik qollanıladı?", o: ["var","val","const","let"], a: 1 },
+  { q: "Android Studio-da jańa joba (project) jaratqanda tiykarǵı aktiviti ushın qaysı til ádette tańlanadı?", o: ["C++","Java","Kotlin","Python"], a: 2 },
+  { q: "Kotlin tilinde bos (null) bolıwı múmkin bolǵan ózgeriwshini járiyalaw ushın belgi qollanıladı?", o: ["!","?","$","&"], a: 1 },
+  { q: "Android-te UI komponentlerin (button, textview h.b.) programma kodında tabıw ushın qaysı funkciya qollanıladı?", o: ["findViewById()","findView()","getViewById()","loadView()"], a: 0 },
+  { q: "Kotlin tilinde ekrana maǵlıwmat shıǵarıw (konsolge) ushın qaysı buyrıq qollanıladı?", o: ["print() hám println()","echo()","console.log()","write()"], a: 0 },
+  { q: "Android Studio-da qaysı faylda qosımnıń ruxsatları (permissions) hám Activity-leri dizimge alınadı?", o: ["build.gradle","AndroidManifest.xml","strings.xml","MainActivity.kt"], a: 1 },
+  { q: "Kotlin tilinde shártli operator qaysı?", o: ["switch","when hám if","select","case"], a: 1 },
+  { q: "Android-te bir Activity-den basqasına ótiw ushın qaysı klass qollanıladı?", o: ["Intent","Context","Bundle","Action"], a: 0 },
+  { q: "Kotlin tilinde funkciya qaysı sóz benen baslanadı?", o: ["func","def","fun","function"], a: 2 },
+  { q: "Android Studio-da qaysı til Gradle skriptlerin jazıw ushın tiykarǵı bolıp esaplanadı (Kotlin DSL)?", o: ["Groovy yamasa Kotlin","HTML","XML","SQL"], a: 0 },
+  { q: "Kotlin tilinde klasslar ádette qaysı sóz benen jaratıladı?", o: ["class","struct","object","type"], a: 0 },
+  { q: "Android-te qısqa xabar (qaltırawshı eskertiw) kórsetiw ushın qaysı klass qollanıladı?", o: ["Alert","Toast","Message","Popup"], a: 1 },
+  { q: "Kotlin tilinde miyras alıw (inheritance) ushın qaysı belgi qollanıladı?", o: [":","->","=>","::"], a: 0 },
+  { q: "Android Studio-da interfeys dizaynı qaysı fayllarda islep shıǵarıladı?", o: [".kt",".xml",".java",".gradle"], a: 1 },
+  { q: "Kotlin tilinde val hám var ayırmashılıǵı nede?", o: ["val ózgermeydi (read-only), var ózgeredi","val sanlar ushın, var sózler ushın","val global, var lokal","Ayırmashılıǵı joq"], a: 0 },
+  { q: "Android-te dizimlerdi (lists) kórsetiw ushın eń kóp qollanılatuǵın komponent qaysı?", o: ["ListView hám RecyclerView","TextView","ImageView","Button"], a: 0 },
+  { q: "Kotlin tilinde massivlerdi yamasa dizimlerdi aylanıp shıǵıw ushın qaysı operator qollanıladı?", o: ["for","loop","repeat","foreach"], a: 0 },
+  { q: "Android Studio-da qosımnıń dizayn elementlerin kóriw ushın qaysı rejim qollanıladı?", o: ["Design / Split","Code only","Terminal","Logcat"], a: 0 },
+  { q: "Kotlin tilinde String tipli ózgeriwshige qáwender (string template) qalay jazıladı?", o: ["$variable","%variable","&variable","#variable"], a: 0 },
+  { q: "Android-te Activity ómir cikli (lifecycle) qaysı metod penen baslanadı?", o: ["onCreate()","onStart()","onResume()","onDestroy()"], a: 0 },
+  { q: "Kotlin tilinde múmkin bolǵan qátelerdi uslaw ushın qaysı blok qollanıladı?", o: ["try-catch","if-else","do-while","switch-case"], a: 0 },
+  { q: "Android Studio-da emulator qanday maqsetke xizmet etedi?", o: ["Qosımnıń kompyuterde islewini tekseriw (virtual telefon)","Kodtı saqlaw","Dizayn reńlerin ózgertiw","Internetke shıǵıw"], a: 0 },
+  { q: "Kotlin-de obyekt baǵdarlanǵan programmalaştırıwdıń tiykarǵı principleri qaysılar?", o: ["Kopsizlik, inkapsulyaciya, polimorfizm, miyras alıw","Tek ǵana funkciyalar","Maǵlıwmatlar bazası","XML formatı"], a: 0 },
+  { q: "Android-te paydalanıwshı menen óz-ara baylanıs ushın qaysı klass basqıshı qollanıladı?", o: ["Activity","Service","BroadcastReceiver","ContentProvider"], a: 0 },
+  { q: "Kotlin tilinde tolıq óshirilmegen (data class) neni ańlatadı?", o: ["Maǵlıwmat saqlawǵa arnalǵan arnawlı klass (data class)","Qáteli klass","Bos klass","Funksiya klassı"], a: 0 },
+  { q: "Android Studio-da qatelerdi baqlaw hám loglardı kóriw ushın qaysı aynası qollanıladı?", o: ["Logcat","Terminal","Project","Build"], a: 0 },
+  { q: "Kotlin tilinde mánisti qaytarıwshı funkciyalarda qaysı túsinik qollanıladı?", o: ["return","back","give","send"], a: 0 },
+  { q: "Android-te paydalanıwshı maǵlıwmatların saqlaw ushın (jeńil sazlawlar) qaysı qollanıladı?", o: ["SharedPreferences","Intent","Toast","Adapter"], a: 0 },
+  { q: "Kotlin tilinde when operatorı basqa tildegi qaysı operatorǵa uqsas?", o: ["switch","if","for","while"], a: 0 },
+  { q: "Android Studio-da qosımnıń APK faylın dúziw ushın qaysı menyu qollanıladı?", o: ["Build -> Build Bundle(s) / APK(s)","File -> Save","Run -> Run 'app'","Tools -> Sync"], a: 0 },
+  { q: "Kotlin tilinde lambda-funksiyalar qaysı jaqsha arqalı jazıladı?", o: ["{ }","( )","[ ]","< >"], a: 0 },
+  { q: "Android-te kóp aǵımlı (multithreading) wazıypalar ushın tiykarǵı qurallardıń biri qaysı?", o: ["Coroutines (Korutinalar)","Loops","Variables","XML layouts"], a: 0 },
+  { q: "Kotlin tilinde val name: String? = null degenimizdiń mánisi nede?", o: ["name ózgeriwshisi null bolıwı múmkin","name qáteli","name ósip baratır","Mánisi joq"], a: 0 },
+  { q: "Android Studio-da interfeys elementlerin ornalastırıw ushın qaysı Layout tipleri kóp qollanıladı?", o: ["ConstraintLayout, LinearLayout, FrameLayout","SkanerLayout","TextLayout","ButtonLayout"], a: 0 },
+  { q: "Kotlin tilinde Int tipli ózgeriwshini String-ke ózgertiw ushın qaysı funkciya qollanıladı?", o: ["toString()","toInt()","toText()","string()"], a: 0 },
+  { q: "Android-te fon rejimininde isleytuǵın komponent qaysı?", o: ["Service","Activity","View","Button"], a: 0 },
+  { q: "Kotlin tilinde ?. operatorı qalay ataladı?", o: ["Safe call operator (Qawipsiz shaqırıw operatorı)","Not-null assertion","Elvis operator","Comparison operator"], a: 0 },
+  { q: "Android Studio-da dizayn elementine ID beriw ushın XML-de qaysı atribut qollanıladı?", o: ["android:id","android:name","android:text","android:layout"], a: 0 },
+  { q: "Kotlin tilinde ?: operatorı qalay ataladı?", o: ["Elvis operatorı","Question operator","Safe operator","Null operator"], a: 0 },
+  { q: "Android-te maǵlıwmatlar bazası menen islew ushın qaysı kitabxana usınıladı?", o: ["Room","Retrofit","Glide","Gson"], a: 0 },
+  { q: "Kotlin tilinde interfeys jaratıw ushın qaysı sóz qollanıladı?", o: ["interface","protocol","class","abstract"], a: 0 },
+  { q: "Android Studio-da proekt faylların strukturası ádette qaysı panelde kórsetiledi?", o: ["Project panel","Logcat panel","Terminal panel","Build panel"], a: 0 },
+  { q: "Kotlin tilinde murattaw (extension) funkciyalar qanday maqsetke xizmet etedi?", o: ["Bar bolǵan klassqa jańa funkciya qosıw (klassdı ózgertpesten)","Klassdı óshiriw","Programmanı tezletiw","Qátelersiz islew"], a: 0 },
+  { q: "Android-te internetten maǵlıwmat alıw (API menen islew) ushın kóp qollanılatuǵın kitabxana?", o: ["Retrofit","SQLite","Toast","Intent"], a: 0 },
+  { q: "Kotlin tilinde override sózi neni ańlatadı?", o: ["Ata klass(superclass) metodın qayta anıqlaw (jazıw)","Jańa klass ashıw","Ózgeriwshige mánis beriw","Programmanı toqtatıw"], a: 0 },
+  { q: "Android Studio-da Gradle sinkronizaciyası ne ushın kerek?", o: ["Kitabxanalardı hám proekt sazlawların jańalaw hám baylanıstırıw","Oyındı oynaw","Súwretlerdi kórsetiw","Telefon zaryadın tekseriw"], a: 0 },
+  { q: "Kotlin tilinde massiv uzınlıǵın (elementler sanın) anıqlaw ushın qaysı qásiyet qollanıladı?", o: ["size","length","count","index"], a: 0 },
+  { q: "Android-te súwretlerdi internetten júklep kórsetiw ushın qaysı kitabxana keń tarqalǵan?", o: ["Glide / Picasso","Retrofit","Room","SQLite"], a: 0 },
+  { q: "Kotlin tilinde by lazy neni bildiredi?", o: ["Lazy initialization (kechiktirilgen Inisializaciya)","Tez islew","Qáteli ózgeriwshi","Bos turǵan funksiya"], a: 0 },
+  { q: "Android Studio-da qaysı batırmanı basıp proektti (qosımnıń ózin) iske túsiremiz (run)?", o: ["Yashıl úshmuyshlik (Play) batırması","Qızıl kvadrat batırması","Kók belgi","Sarısha strelka"], a: 0 },
+  { q: "Kotlin tilinde companion object neni bildiredi?", o: ["Static aǵzalar sıyaqlı isleytuǵın obyekt (klass ishinde)","Jasırın funkciya","Maǵlıwmatlar bazası","Interfeys"], a: 0 },
+  { q: "Android-te bir ekran ishinde bir neshe bólimlerdi almastırıw ushın qaysı komponent qollanıladı?", o: ["Fragment","Activity","Button","Adapter"], a: 0 },
+  { q: "Kotlin tilinde massivlerdi sorov (sort) qılıw ushın qaysı funkciya bar?", o: ["sorted() / sort()","order()","arrange()","filter()"], a: 0 },
+  { q: "Android Studio-da qaysı fayl arqalı qosımnıń atı, versiyası hám icon-ları sazlanadı?", o: ["AndroidManifest.xml","MainActivity.kt","build.gradle","strings.xml"], a: 0 },
+  { q: "Kotlin tilinde immutable dizim jaratıw ushın qaysı funkciya qollanıladı?", o: ["listOf()","mutableListOf()","arrayListOf()","setOf()"], a: 0 },
+  { q: "Android-te JSON formatındaǵı maǵlıwmatlardı parse qılıw ushın qaysı kitabxana keń qollanıladı?", o: ["Gson / Moshi / Kotlinx.serialization","Retrofit","Glide","Room"], a: 0 },
+  { q: "Kotlin tilinde open sózi klass aldınan jazılsa neni bildiredi?", o: ["Bul klassdan miyras alıw múmkin (inherit qılıwǵa boladı)","Klass ashıq","Klass qáteli","Maǵlıwmat joq"], a: 0 },
+  { q: "Android Studio-da View Binding tiykarǵı maqseti nede?", o: ["findViewById() ornına qáwipsiz hám qolay túrde interfeys elementlerine qatnas qılıw","Súwretlerdi shıǵarıw","Internetke qosılıw","Bazanı jaratıw"], a: 0 },
+  { q: "Kotlin tilinde map kollektor funkciyası nesi menen belgili?", o: ["Hár bir elementti ózgertip, jańa kolleksiya qaytaradı","Elementlerdi óshiredi","Elementlerdi sanaydı","Ekrana shıǵaradı"], a: 0 },
+  { q: "Android-te qosımsha basqa qosımshalar menen maǵlıwmat almasıwı ushın qaysı mexanizm qollanıladı?", o: ["Intent (Implicit Intent)","Toast","Fragment","Service"], a: 0 },
+  { q: "Kotlin tilinde sealed class neni bildiredi?", o: ["Bálent dárejeli sheklengen klasslar iyerarxiyasın jaratıw","Jasırın klass","Ashıq klass","Bos klass"], a: 0 },
+  { q: "Android Studio-da Logcat-te qáteler qaysı reńde kórsetiledi?", o: ["Qızıl (Red)","Jasıl (Green)","Kók (Blue)","Sarı (Yellow)"], a: 0 },
+  { q: "Kotlin tilinde init blokı qashan isleydi?", o: ["Klass obyekti jaratılǵanda birinshi bolıp","Programma jabılǵanda","Funksiya shaqırılmaǵanda","Qáte bolǵanda"], a: 0 },
+  { q: "Android-te ConstraintLayout-ta elementti basqa elementke baylanıstırıw ushın nedi qollanamız?", o: ["Constraints (Sheklewler / Baylanıslar)","Margin","Padding","Text size"], a: 0 },
+  { q: "Kotlin tilinde as sózi qanday maqsette qollanıladı?", o: ["Tipdi ózgertiw (Type casting)","Shárt tekseriw","Maǵlıwmat saqlaw","Ózgeriwshi jaratıw"], a: 0 },
+  { q: "Android-te qosımsha fon rejimininde uzaq waqıt isleytuǵın wazıypalar ushın házirgi waqıtta qaysı tavsiye etiledi?", o: ["WorkManager","Thread.sleep()","Toast","Intent"], a: 0 },
+  { q: "Kotlin tilinde in operatorı qanday tekseriw ushın qollanıladı?", o: ["Diapazonda yamasa kolleksiyada bar-joqlıǵın tekseriw","Sanlaw","Óshiriw","Qosıw"], a: 0 },
+  { q: "Android Studio-da qaysı batırmanı basıp proektti tazalaymız (Clean project)?", o: ["Build -> Clean Project","File -> Exit","Run -> Stop","Help -> About"], a: 0 },
+  { q: "Kotlin tilinde enum class qanday maqsetke xizmet etedi?", o: ["Turaqlı atamalar (konstantalar) toplamın anıqlaw","Matnlerdi jazıw","Sanlardı esaplaw","Klass miyras alıw"], a: 0 },
+  { q: "Android-te paydalanıwshı tuymasın (Button) basqanda waqiyanı (click event) qalay qosamız?", o: ["button.setOnClickListener { ... }","button.click()","button.press()","button.listen()"], a: 0 },
+  { q: "Kotlin tilinde distinct() funkciyası kolleksiyada nəsini isleydi?", o: ["Qaytarılatuǵın elementlerdi (dublikatlardı) óshiredi","Elementlerdi kóbeytedi","Elementlerdi saralaydı","Barlıq elementti óshiredi"], a: 0 },
+  { q: "Android-te Intent-tiń qanday túrleri bar?", o: ["Explicit (Anıq) hám Implicit (Anıq emes)","Fast hám Slow","Local hám Global","Public hám Private"], a: 0 },
+  { q: "Kotlin tilinde qaysı túsinik \"getter\" hám \"setter\" wazıypasın avtomat túrde atqaradı?", o: ["Properties (Qásiyetler)","Functions","Variables","Loops"], a: 0 },
+  { q: "Android Studio-da Layout dizaynında elementler arasındaǵı ishki aralıq (ishki shet) qalay ataladı?", o: ["Padding","Margin","Size","Weight"], a: 0 },
+  { q: "Kotlin tilinde let scope funkciyası qanday wazıypanı atqaradı?", o: ["Obyekt kontekstinde kod blokın iske túsirip, nátiyeni qaytaradı (it arqalı)","Ózgeriwshini óshiredi","Programmanı toqtatıw","Qátelermen islew"], a: 0 },
+  { q: "Android-te RecyclerView ishinde maǵlıwmatlardı kórsetiw ushın tiykarǵı kómekshi qaysı?", o: ["Adapter (RecyclerView.Adapter)","Controller","Manager","Service"], a: 0 },
+  { q: "Kotlin tilinde interfeys ishinde funkciyanıń standart denesi (default implementation) bolıwı múmkin be?", o: ["Hawa, múmkin","Yoq, múmkin emes","Tek ǵana abstraktsiya bolıwı shárt","Tek C++ tilinde múmkin"], a: 0 },
+  { q: "Android Studio-da qaysı qurallar qosımnıń ónimdarlıǵın (performance) tekseredi?", o: ["Profiler (CPU, Memory, Network)","Logcat","Terminal","Gradle"], a: 0 },
+  { q: "Kotlin tilinde val menen jasalǵan kolleksiya ishindegi elementti ózgertiwge bola ma (mutableListOf bolsa)?", o: ["Hawa, kolleksiya elementleri ózgeriwshi múmkin, tek siltemesi ózgermeydi","Yoq, múmkin emes","Tek kompyuter óshkende","Qáte beredi"], a: 0 },
+  { q: "Android-te BroadcastReceiver qanday wazıypanı atqaradı?", o: ["Sistema waqıyaların (mısalı: batareya tawısıldı, internet óshти) tıńlaw hám qabıllaw","Ekranga súwret shıǵarıw","Maǵlıwmatlar bazasın saqlaw","Sázlewlerdi ózgertiw"], a: 0 },
+  { q: "Kotlin tilinde generic (parametriklengen) túrler qaysı jaqshalar arqalı kórsetiledi?", o: ["< >","{ }","( )","[ ]"], a: 0 },
+  { q: "Android Studio-da Layout faylın XML den Vizual kóriniwge ótiw ushın qaysı tab tańlanadı?", o: ["Split / Design tab","Code tab","Build tab","Log tab"], a: 0 },
+  { q: "Kotlin tilinde it ataması qanday jaǵdayda qollanıladı?", o: ["Bir ǵana parametrli lambda funkciyada implicit parametr retinde","Barlıq waqıtta ózgeriwshi atı sıpatında","Klass atı sıpatında","Funksiya atı sıpatında"], a: 0 },
+  { q: "Android-te bir neshe Activity arasınan maǵlıwmat (dereek) jiberiw ushın ne qollanıladı?", o: ["intent.putExtra()","intent.getData()","toast.send()","bundle.save()"], a: 0 },
+  { q: "Kotlin tilinde tailrec sózi qanday funkciyalar ushın qollanıladı?", o: ["Quyrıqlı rekursiya (Tail recursion) optimizaciyası ushın","Teз isleytuǵın loop ushın","Bos funkciyalar ushın","Qáteli funkciyalar ushın"], a: 0 },
+  { q: "Android Studio-da qaysı faylda qosımnıń versiya nomeri (versionCode, versionName) kórsetiledi?", o: ["build.gradle (Module level)","AndroidManifest.xml","strings.xml","MainActivity.kt"], a: 0 },
+  { q: "Kotlin tilinde not-null assertion (keskin null emes) operatorı qaysı?", o: ["!!","?", "?:","?."], a: 0 },
+  { q: "Android-te paydalanıwshı interfeysindegi elementlerdiń sırtqı aralıǵı (shetke shekemgi aralıq) qalay ataladı?", o: ["Margin","Padding","Size","Weight"], a: 0 },
+  { q: "Kotlin tilinde apply scope funkciyası qanday nátiyeni qaytaradı?", o: ["Obyekttiń ózin (this)","Lambda aqırǵı qatırın","Boolean mánisin","Hech narsa qaytarmaydı"], a: 0 },
+  { q: "Android Studio-da qosımnıń UI elementlerin avtomat túrde tegislew hám qurıw ushın qaysı dizayn quralı qollanıladı?", o: ["ConstraintLayout Editor (Constraintler)","Logcat","Gradle","Terminal"], a: 0 },
+  { q: "Kotlin tilinde object sózi arqalı nede jaratıladı?", o: ["Singleton obyekt","Klass","Funksiya","Massiv"], a: 0 },
+  { q: "Android-te qosımsha basqa tilde (mısalı qaraqalpaq tilinde) islesi ushın tekstler qaysı faylda saqlanadı?", o: ["strings.xml","AndroidManifest.xml","build.gradle","MainActivity.kt"], a: 0 },
+  { q: "Kotlin tilinde super sózi neni bildiredi?", o: ["Ata klass (superclass) qásiyetlerine yamasa metodlarına qatnas","Jańa obyekt jaratıw","Programmanı toqtatıw","Qátelikti joq qılıw"], a: 0 },
+  { q: "Android Studio-da Git/GitHub menen baylanıstırıw hám versiyalardı basqarıw quralı qalay ataladı?", o: ["Version Control (Git Integration)","Logcat","Gradle","Emulator"], a: 0 },
+  { q: "Kotlin tilinde to sózi (mısalı 1 to \"bir\") qanday obyektlerdi jaratıw ushın qollanıladı?", o: ["Pair (Jup)","List (Dizim)","Map (Sózlik)","Set"], a: 0 },
+  { q: "Android-te ekranda dizim elementlerin tikka yamasa gorizontal baǵdarda kórsetiw ushın qaysı qollanıladı?", o: ["LinearLayoutManager","GridLayoutManager","Adapter","ViewHolder"], a: 0 },
+  { q: "Kotlin tilinde run scope funkciyası let-ten nesi menen parqlanadı?", o: ["this kontekstinde isleydi (let it menen isleydi)","Parqı joq","Tek sanlar menen isleydi","Tek klass ishinde boladı"], a: 0 },
+  { q: "Android Studio-da proekttiń barlıq kerekli kelewshi faylların (dependencies) júklewshi qural?", o: ["Gradle","Maven","Git","JDK"], a: 0 },
+  { q: "Kotlin tilinde val menen jasalǵan ózgeriwshige keyin basqa mánis beriwge bola ma?", o: ["Yoq, bolmaydı (turaqlı)","Hawa, boladı","Tek bir ret basqa mánis beriwge boladı","Tek sanlar menen boladı"], a: 0 },
+  { q: "Android-te qosımnıń jergilikli maǵlıwmatlar bazası menen tikeleyslew ushın eń kóp qollanılatuǵın arxitektura qaysı?", o: ["MVVM (Model-View-ViewModel)","HTML","CSS","JSON"], a: 0 }
+];
+
+/* ============================================================
+   ЛОГИКА ВИКТОРИНЫ
+   ============================================================ */
+const TIME_PER_QUESTION = 20; // секунд на вопрос
+
+let questions = [];
+let current = 0;
+let score = 0;
+let timerId = null;
+let timeLeft = TIME_PER_QUESTION;
+let locked = false;
+
+// Перемешивание массива (Fisher–Yates)
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startQuiz() {
+  // Перемешиваем вопросы и варианты ответов
+  questions = shuffle(QUESTIONS).map(q => {
+    const correctText = q.o[q.a];
+    const opts = shuffle(q.o);
+    return { q: q.q, o: opts, a: opts.indexOf(correctText) };
+  });
+  current = 0;
+  score = 0;
+
+  document.getElementById("qTotal").textContent = questions.length;
+  document.getElementById("startScreen").classList.add("hidden");
+  document.getElementById("quizScreen").classList.remove("hidden");
+  showQuestion();
+}
+
+function showQuestion() {
+  locked = false;
+  const q = questions[current];
+
+  // Обновляем прогресс и счёт
+  document.getElementById("qNum").textContent = current + 1;
+  document.getElementById("scoreNow").textContent = score;
+  document.getElementById("progressFill").style.width =
+    ((current) / questions.length * 100) + "%";
+
+  // Текст вопроса
+  document.getElementById("questionText").textContent = q.q;
+
+  // Варианты
+  const box = document.getElementById("optionsBox");
+  box.innerHTML = "";
+  q.o.forEach((opt, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "option";
+    btn.textContent = opt;
+    btn.onclick = () => selectAnswer(idx, btn);
+    box.appendChild(btn);
+  });
+
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(timerId);
+  timeLeft = TIME_PER_QUESTION;
+  const timerEl = document.getElementById("timer");
+  timerEl.classList.remove("danger");
+  timerEl.textContent = `⏱ ${timeLeft}s`;
+
+  timerId = setInterval(() => {
+    timeLeft--;
+    timerEl.textContent = `⏱ ${timeLeft}s`;
+    if (timeLeft <= 5) timerEl.classList.add("danger");
+    if (timeLeft <= 0) {
+      clearInterval(timerId);
+      timeUp();
+    }
+  }, 1000);
+}
+
+function timeUp() {
+  if (locked) return;
+  locked = true;
+  // Подсветить правильный ответ
+  const q = questions[current];
+  const btns = document.querySelectorAll(".option");
+  btns.forEach((b, i) => {
+    b.disabled = true;
+    if (i === q.a) b.classList.add("correct");
+  });
+  setTimeout(nextQuestion, 1200);
+}
+
+function selectAnswer(idx, btn) {
+  if (locked) return;
+  locked = true;
+  clearInterval(timerId);
+
+  const q = questions[current];
+  const btns = document.querySelectorAll(".option");
+  btns.forEach(b => b.disabled = true);
+
+  if (idx === q.a) {
+    btn.classList.add("correct");
+    score++;
+    document.getElementById("scoreNow").textContent = score;
+  } else {
+    btn.classList.add("wrong");
+    btns[q.a].classList.add("correct");
+  }
+
+  setTimeout(nextQuestion, 1000);
+}
+
+function nextQuestion() {
+  current++;
+  if (current < questions.length) {
+    showQuestion();
+  } else {
+    finishQuiz();
+  }
+}
+
+function finishQuiz() {
+  clearInterval(timerId);
+  document.getElementById("quizScreen").classList.add("hidden");
+  document.getElementById("resultScreen").classList.remove("hidden");
+
+  const total = questions.length;
+  const percent = Math.round(score / total * 100);
+  document.getElementById("finalScore").textContent = `${score} / ${total}`;
+
+  let msg = "";
+  if (percent >= 90) msg = "🏆 Ájayıp! Siz Android/Kotlin boyınsha ekspertsiz!";
+  else if (percent >= 70) msg = "🎉 Jaqsı nátiyje! Biraz shınıǵıw menen 100% boladı.";
+  else if (percent >= 50) msg = "👍 Orta nátiyje. Materialdı qayta kórip shıǵıń.";
+  else msg = "📚 Basıw. Eske túsiriw kerek — qaytadan urınıp kóriń!";
+
+  document.getElementById("finalMessage").textContent =
+    `${percent}% — ${msg}`;
+}
+</script>
+</body>
+</html>
